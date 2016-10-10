@@ -8,7 +8,8 @@ public class MMR {
 
     public static void main(String[] args) {
         ImageData.init();
-        String q = "100.jpg";
+        // desired query image
+        String q = "1733.jpg";
         double[] nh = ImageData.getNH(q);
         Image i1 = new Image(nh);
         File dir = new File("images/");

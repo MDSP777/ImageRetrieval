@@ -1,14 +1,10 @@
 package mmr;
 
-
-import com.sun.image.codec.jpeg.ImageFormatException;
-import com.sun.image.codec.jpeg.JPEGCodec;
-import com.sun.image.codec.jpeg.JPEGImageDecoder;
 import java.awt.image.BufferedImage;
 import java.awt.image.ColorModel;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
+import javax.imageio.ImageIO;
 
 public class Image {
     String filename;
@@ -24,10 +20,8 @@ public class Image {
         this.filename = filename;
         try {
             File file = new File(filename);
-            FileInputStream in = new FileInputStream(file);
-            JPEGImageDecoder decoder = JPEGCodec.createJPEGDecoder(in);
-            bi = decoder.decodeAsBufferedImage();
-        } catch (IOException | ImageFormatException ex) {}
+            bi = ImageIO.read(file);
+        } catch (IOException ex) {}
         nRows = bi.getHeight();
         nCols = bi.getWidth();
         area = nRows*nCols;
