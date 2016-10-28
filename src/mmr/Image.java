@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import javax.imageio.ImageIO;
 
 public class Image {
@@ -94,6 +95,162 @@ public class Image {
         }
         sim/=nValidColors;
         return sim;
+    }
+    
+    //checks whether an int is prime or not.
+    public boolean isPrime(int n) {
+        //check if n is a multiple of 2
+        if (n%2==0) return false;
+        //if not, then just check the odds
+        for(int i=3;i*i<=n;i+=2) {
+            if(n%i==0)
+                return false;
+        }
+        return true;
+    }
+    
+    public ArrayList<Integer> getFactors(int n) {
+        ArrayList<Integer> factors = new ArrayList<>();
+        
+        int factorNumber = 1;
+        while(factorNumber <= n){
+            if(n % factorNumber == 0){
+                System.out.println(factorNumber + " is a factor of " + n);
+            }
+            factorNumber++;
+        }
+        
+        return factors;
+    }
+    
+    /* CH with Centering Refinement */
+    public double algo2(Image i2, double delta, double centerPercent){
+        centerPercent = 0.5;
+        
+        /* image 1 */
+        int i1areaCenter = (int) Math.round(this.area*centerPercent);
+        while (!isPrime(i1areaCenter)){
+            i1areaCenter++;
+        }
+        ArrayList<Integer> i1factors = getFactors(i1areaCenter);
+        int i1nRowsCenter = 0, i1nColsCenter = 0;
+        if (i1factors.size() % 0 == 0){
+            i1nRowsCenter = i1factors.get((i1factors.size()/2)-1); // if 10, returns 4
+            i1nColsCenter = i1factors.get(i1factors.size()/2);
+        } else {
+            i1nRowsCenter = i1factors.get((i1factors.size()/2)); // if 11, returns 5
+            i1nColsCenter = i1factors.get((i1factors.size()/2+1)); // if 11, returns 6
+        }
+        
+        if (this.nRows > this.nCols){
+            if (i1nColsCenter > i1nRowsCenter){
+                int temp = i1nRowsCenter;
+                i1nRowsCenter = i1nColsCenter;
+                i1nColsCenter = temp;
+            }
+        } else if (this.nCols > this.nRows){
+            if (i1nRowsCenter > i1nColsCenter){
+                int temp = i1nRowsCenter;
+                i1nRowsCenter = i1nColsCenter;
+                i1nColsCenter = temp;
+            }
+        }
+                               
+        int i1nRowsCenterStart = ((this.nRows - i1nRowsCenter) / 2);
+        int i1nRowsCenterEnd = i1nRowsCenterStart + i1nRowsCenter - 1;
+        int i1nColsCenterStart = ((this.nCols - i1nColsCenter) / 2);
+        int i1nColsCenterEnd = i1nColsCenterStart + i1nColsCenter - 1;
+        
+        double[] i1nhNonCenter = new double[LUV_MAX];
+        double[] i1nhCenter = new double[LUV_MAX];
+        for (int i = 0; i < luv.length; i++){
+            for (int j = 0; j < luv[i].length; j++){
+                if (i >= i1nRowsCenterStart && i <= i1nRowsCenterEnd
+                    && j >= i1nColsCenterStart && j <= i1nColsCenterEnd){
+                    if (i>0)
+                        i1nhCenter[i*j] ++;
+                    else
+                        i1nhCenter[i+j] ++;
+                } else {
+                    if (i>0)
+                        i1nhNonCenter[i*j] ++;
+                    else
+                        i1nhNonCenter[i+j] ++;
+                }
+            }
+        }
+        
+        /* image 2 */
+        int i2areaCenter = (int) Math.round(i2.area*centerPercent);
+        while (!isPrime(i2areaCenter)){
+            i2areaCenter++;
+        }
+        ArrayList<Integer> i2factors = getFactors(i2areaCenter);
+        int i2nRowsCenter = 0, i2nColsCenter = 0;
+        if (i2factors.size() % 0 == 0){
+            i2nRowsCenter = i2factors.get((i2factors.size()/2)-1); // if 10, returns 4
+            i2nColsCenter = i2factors.get(i2factors.size()/2);
+        } else {
+            i2nRowsCenter = i2factors.get((i2factors.size()/2)); // if 11, returns 5
+            i2nColsCenter = i2factors.get((i2factors.size()/2+1)); // if 11, returns 6
+        }
+        
+        if (i2.nRows > i2.nCols){
+            if (i2nColsCenter > i2nRowsCenter){
+                int temp = i2nRowsCenter;
+                i2nRowsCenter = i2nColsCenter;
+                i2nColsCenter = temp;
+            }
+        } else if (i2.nCols > i2.nRows){
+            if (i2nRowsCenter > i2nColsCenter){
+                int temp = i2nRowsCenter;
+                i2nRowsCenter = i2nColsCenter;
+                i2nColsCenter = temp;
+            }
+        }
+                               
+        int i2nRowsCenterStart = ((i2.nRows - i2nRowsCenter) / 2);
+        int i2nRowsCenterEnd = i2nRowsCenterStart + i2nRowsCenter - 1;
+        int i2nColsCenterStart = ((this.nCols - i2nColsCenter) / 2);
+        int i2nColsCenterEnd = i2nColsCenterStart + i2nColsCenter - 1;
+        
+        double[] i2nhNonCenter = new double[LUV_MAX];
+        double[] i2nhCenter = new double[LUV_MAX];
+        for (int i = 0; i < luv.length; i++){
+            for (int j = 0; j < luv[i].length; j++){
+                if (i >= i2nRowsCenterStart && i <= i2nRowsCenterEnd
+                    && j >= i2nColsCenterStart && j <= i2nColsCenterEnd){
+                    if (i>0)
+                        i2nhCenter[i*j] ++;
+                    else
+                        i2nhCenter[i+j] ++;
+                } else {
+                    if (i>0)
+                        i2nhNonCenter[i*j] ++;
+                    else
+                        i2nhNonCenter[i+j] ++;
+                }
+            }
+        }
+        
+        /* compare */
+        int nValidColorsCenters = 0, nValidColorsNonCenters = 0;
+        double simCenters = 0, simNonCenters = 0;
+        for(int i=0; i<LUV_MAX; i++){
+            if(i1nhCenter[i]>delta){
+                nValidColorsCenters++;
+                double cur = 1.0 - Math.abs(i1nhCenter[i]-i2nhCenter[i]) / Math.max(i1nhCenter[i],i2nhCenter[i]);
+            }
+            if(i1nhNonCenter[i]>delta){
+                nValidColorsNonCenters++;
+                double cur = 1.0 - Math.abs(i1nhNonCenter[i]-i2nhNonCenter[i])/Math.max(i1nhNonCenter[i], i2nhNonCenter[i]);
+                simNonCenters+=cur;
+            }
+        }
+        simCenters/=nValidColorsCenters;
+        simNonCenters/=nValidColorsNonCenters;
+        
+        return simCenters+simNonCenters/2;
     }
     
     public double bonus(Image i2, double delta){
