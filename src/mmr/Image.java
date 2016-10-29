@@ -19,7 +19,8 @@ public class Image {
     int nCols;
     int area;
     int[][] luv;
-    double[] nh;
+    double[] nh, nhNonCenter, nhCenter;
+    boolean nhCenterNonCenterComputed;
     double[][][] lh;
     
     public Image(String filename){
@@ -34,6 +35,9 @@ public class Image {
         
         luv = new int[nRows][nCols];
         nh = new double[LUV_MAX];
+        nhNonCenter = new double[LUV_MAX];
+        nhCenter = new double[LUV_MAX];
+        nhCenterNonCenterComputed = false;
         lh = new double[BLOCKS_PER_ROW][BLOCKS_PER_COL][LUV_MAX];
         for(int i=0; i<nRows; i++)
             for(int j=0; j<nCols; j++){
@@ -122,128 +126,85 @@ public class Image {
         
         return factors;
     }
+
+    public void computeNHCenterNonCenter(double centerPercent){
+        int areaCenter = (int) Math.round(this.area * centerPercent);
+        while (isPrime(areaCenter)){
+            areaCenter++;
+        }
+
+        ArrayList<Integer> factors = getFactors(areaCenter);
+        int nRowsCenter = 0, nColsCenter = 0;
+        if (factors.size() % 0 == 0){
+            nRowsCenter = factors.get((factors.size()/2)-1); // if 10, returns 4
+            nColsCenter = factors.get((factors.size()/2)); // if 10, returns 5
+        } else {
+            nRowsCenter = factors.get((factors.size()/2)); // if 11, returns 5
+            nColsCenter = factors.get((factors.size()/2)-1); // if 11, returns 6
+        }
+
+        if (this.nRows > this.nCols){
+            if (nColsCenter > nRowsCenter){
+                int temp = nRowsCenter;
+                nRowsCenter = nColsCenter;
+                nColsCenter = temp;
+            }
+        } else if (this.nCols > this.nRows){
+            if (nRowsCenter > nColsCenter){
+                int temp = nRowsCenter;
+                nRowsCenter = nColsCenter;
+                nColsCenter = temp;
+            }
+        }
+
+        int nRowsCenterStart = ((this.nRows - nRowsCenter) / 2);
+        int nRowsCenterEnd = nRowsCenterStart + nRowsCenter - 1;
+        int nColsCenterStart = ((this.nCols - nColsCenter) / 2);
+        int nColsCenterEnd = nColsCenterStart + nColsCenter - 1;
+
+        for (int i = 0; i < luv.length; i++){
+            for (int j = 0; j < luv[i].length; j++){
+                if (i >= nRowsCenterStart && i <= nRowsCenterEnd
+                    && j >= nColsCenterStart && j <= nColsCenterEnd){
+                    if (i>0)
+                        nhCenter[luv[i][j]] ++;
+                    else
+                        nhCenter[i+j] ++;
+                } else {
+                    if (i>0)
+                        nhNonCenter[luv[i][j]] ++;
+                    else
+                        nhNonCenter[i+j] ++;
+                }
+            }
+        }
+        
+        this.nhCenterNonCenterComputed = true;
+    }
     
     /* CH with Centering Refinement */
     public double algo2(Image i2, double delta, double centerPercent){
         centerPercent = 0.5;
         
-        /* image 1 */
-        int i1areaCenter = (int) Math.round(this.area*centerPercent);
-        while (!isPrime(i1areaCenter)){
-            i1areaCenter++;
+        /* compute centers and noncenters */
+        if (this.nhCenterNonCenterComputed == false){
+            this.computeNHCenterNonCenter(centerPercent);
         }
-        ArrayList<Integer> i1factors = getFactors(i1areaCenter);
-        int i1nRowsCenter = 0, i1nColsCenter = 0;
-        if (i1factors.size() % 0 == 0){
-            i1nRowsCenter = i1factors.get((i1factors.size()/2)-1); // if 10, returns 4
-            i1nColsCenter = i1factors.get(i1factors.size()/2);
-        } else {
-            i1nRowsCenter = i1factors.get((i1factors.size()/2)); // if 11, returns 5
-            i1nColsCenter = i1factors.get((i1factors.size()/2+1)); // if 11, returns 6
-        }
-        
-        if (this.nRows > this.nCols){
-            if (i1nColsCenter > i1nRowsCenter){
-                int temp = i1nRowsCenter;
-                i1nRowsCenter = i1nColsCenter;
-                i1nColsCenter = temp;
-            }
-        } else if (this.nCols > this.nRows){
-            if (i1nRowsCenter > i1nColsCenter){
-                int temp = i1nRowsCenter;
-                i1nRowsCenter = i1nColsCenter;
-                i1nColsCenter = temp;
-            }
-        }
-                               
-        int i1nRowsCenterStart = ((this.nRows - i1nRowsCenter) / 2);
-        int i1nRowsCenterEnd = i1nRowsCenterStart + i1nRowsCenter - 1;
-        int i1nColsCenterStart = ((this.nCols - i1nColsCenter) / 2);
-        int i1nColsCenterEnd = i1nColsCenterStart + i1nColsCenter - 1;
-        
-        double[] i1nhNonCenter = new double[LUV_MAX];
-        double[] i1nhCenter = new double[LUV_MAX];
-        for (int i = 0; i < luv.length; i++){
-            for (int j = 0; j < luv[i].length; j++){
-                if (i >= i1nRowsCenterStart && i <= i1nRowsCenterEnd
-                    && j >= i1nColsCenterStart && j <= i1nColsCenterEnd){
-                    if (i>0)
-                        i1nhCenter[i*j] ++;
-                    else
-                        i1nhCenter[i+j] ++;
-                } else {
-                    if (i>0)
-                        i1nhNonCenter[i*j] ++;
-                    else
-                        i1nhNonCenter[i+j] ++;
-                }
-            }
-        }
-        
-        /* image 2 */
-        int i2areaCenter = (int) Math.round(i2.area*centerPercent);
-        while (!isPrime(i2areaCenter)){
-            i2areaCenter++;
-        }
-        ArrayList<Integer> i2factors = getFactors(i2areaCenter);
-        int i2nRowsCenter = 0, i2nColsCenter = 0;
-        if (i2factors.size() % 0 == 0){
-            i2nRowsCenter = i2factors.get((i2factors.size()/2)-1); // if 10, returns 4
-            i2nColsCenter = i2factors.get(i2factors.size()/2);
-        } else {
-            i2nRowsCenter = i2factors.get((i2factors.size()/2)); // if 11, returns 5
-            i2nColsCenter = i2factors.get((i2factors.size()/2+1)); // if 11, returns 6
-        }
-        
-        if (i2.nRows > i2.nCols){
-            if (i2nColsCenter > i2nRowsCenter){
-                int temp = i2nRowsCenter;
-                i2nRowsCenter = i2nColsCenter;
-                i2nColsCenter = temp;
-            }
-        } else if (i2.nCols > i2.nRows){
-            if (i2nRowsCenter > i2nColsCenter){
-                int temp = i2nRowsCenter;
-                i2nRowsCenter = i2nColsCenter;
-                i2nColsCenter = temp;
-            }
-        }
-                               
-        int i2nRowsCenterStart = ((i2.nRows - i2nRowsCenter) / 2);
-        int i2nRowsCenterEnd = i2nRowsCenterStart + i2nRowsCenter - 1;
-        int i2nColsCenterStart = ((this.nCols - i2nColsCenter) / 2);
-        int i2nColsCenterEnd = i2nColsCenterStart + i2nColsCenter - 1;
-        
-        double[] i2nhNonCenter = new double[LUV_MAX];
-        double[] i2nhCenter = new double[LUV_MAX];
-        for (int i = 0; i < luv.length; i++){
-            for (int j = 0; j < luv[i].length; j++){
-                if (i >= i2nRowsCenterStart && i <= i2nRowsCenterEnd
-                    && j >= i2nColsCenterStart && j <= i2nColsCenterEnd){
-                    if (i>0)
-                        i2nhCenter[i*j] ++;
-                    else
-                        i2nhCenter[i+j] ++;
-                } else {
-                    if (i>0)
-                        i2nhNonCenter[i*j] ++;
-                    else
-                        i2nhNonCenter[i+j] ++;
-                }
-            }
+        if (i2.nhCenterNonCenterComputed == false) {
+            i2.computeNHCenterNonCenter(centerPercent);   
         }
         
         /* compare */
         int nValidColorsCenters = 0, nValidColorsNonCenters = 0;
         double simCenters = 0, simNonCenters = 0;
         for(int i=0; i<LUV_MAX; i++){
-            if(i1nhCenter[i]>delta){
+            if(this.nhCenter[i]>delta){
                 nValidColorsCenters++;
-                double cur = 1.0 - Math.abs(i1nhCenter[i]-i2nhCenter[i]) / Math.max(i1nhCenter[i],i2nhCenter[i]);
+                double cur = 1.0 - Math.abs(this.nhCenter[i]-i2.nhCenter[i]) / Math.max(this.nhCenter[i],i2.nhCenter[i]);
             }
-            if(i1nhNonCenter[i]>delta){
+            if(this.nhNonCenter[i]>delta){
                 nValidColorsNonCenters++;
-                double cur = 1.0 - Math.abs(i1nhNonCenter[i]-i2nhNonCenter[i])/Math.max(i1nhNonCenter[i], i2nhNonCenter[i]);
+                double cur = 1.0 - Math.abs(this.nhNonCenter[i]-i2.nhNonCenter[i])/Math.max(this.nhNonCenter[i], i2.nhNonCenter[i]);
                 simNonCenters+=cur;
             }
         }
