@@ -15,7 +15,7 @@ import java.io.IOException;
     Only need to run once tho. Once txt files are created, no need to run again.
 */
 public class RunThisFirst {
-    public static void main(String[] args) throws IOException{
+    public static void main(String[] args) throws IOException {
         File dir = new File("images/");
         File[] directoryListing = dir.listFiles();
         BufferedWriter bw = new BufferedWriter(new FileWriter("NormalizedHistos.txt"));

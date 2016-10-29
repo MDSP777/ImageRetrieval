@@ -21,6 +21,9 @@ public class Image {
     double[] nh;
     double[][][] lh;
     
+    double[] coherent;
+    double[] noncoherent;
+    
     public Image(String filename){
         this.filename = filename;
         try {
@@ -33,6 +36,10 @@ public class Image {
         
         luv = new int[nRows][nCols];
         nh = new double[LUV_MAX];
+        
+        coherent = new double[LUV_MAX];
+        noncoherent = new double[LUV_MAX];
+        
         lh = new double[BLOCKS_PER_ROW][BLOCKS_PER_COL][LUV_MAX];
         for(int i=0; i<nRows; i++)
             for(int j=0; j<nCols; j++){
@@ -97,6 +104,7 @@ public class Image {
     }
     
     public double bonus(Image i2, double delta){
+        delta/=NUM_BLOCKS;
         double sim = 0;
         for(int i=0; i<BLOCKS_PER_ROW; i++)
             for(int j=0; j<BLOCKS_PER_COL; j++){
@@ -134,4 +142,5 @@ public class Image {
             }
         return sb.toString();
     }
+    
 }

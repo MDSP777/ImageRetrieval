@@ -4,6 +4,7 @@ import java.awt.FlowLayout;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Scanner;
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -13,7 +14,7 @@ public class MMR {
     public static void main(String[] args) {
         ImageData.init();
         // replace with desired query image
-        String q = "0.jpg";
+        String q = "12.jpg";
         double[] nh = ImageData.getNH(q);
         double[][][] lh = ImageData.getLH(q);
         Image i1 = new Image(nh, lh);
