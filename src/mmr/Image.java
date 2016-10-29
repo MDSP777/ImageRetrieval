@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import javax.imageio.ImageIO;
 
 public class Image {
@@ -18,7 +19,7 @@ public class Image {
     int nCols;
     int area;
     int[][] luv;
-    double[] nh;
+    double[] nh, nhNonCenter, nhCenter;
     double[][][] lh;
     
     double[] coherent;
@@ -36,9 +37,12 @@ public class Image {
         
         luv = new int[nRows][nCols];
         nh = new double[LUV_MAX];
-        
+
         coherent = new double[LUV_MAX];
         noncoherent = new double[LUV_MAX];
+        
+        nhNonCenter = new double[LUV_MAX];
+        nhCenter = new double[LUV_MAX];
         
         lh = new double[BLOCKS_PER_ROW][BLOCKS_PER_COL][LUV_MAX];
         for(int i=0; i<nRows; i++)
@@ -84,12 +88,17 @@ public class Image {
         this.lh = lh;
     }
     
+    public Image(double[] center, double[] noncenter){
+        this.nhCenter = center;
+        this.nhNonCenter = noncenter;
+    }
+    
     public Image(double[] nh, double[][][] lh){
         this.nh = nh;
         this.lh = lh;
     }
     
-    public double algo1(Image i2, double delta){
+    public double ch(Image i2, double delta){
         int nValidColors = 0;
         double sim = 0;
         for(int i=0; i<LUV_MAX; i++){
@@ -101,6 +110,101 @@ public class Image {
         }
         sim/=nValidColors;
         return sim;
+    }
+    
+    public boolean isPrime(int n) {
+        for(int i=2;i*i<=n;i++) 
+            if(n%i==0)
+                return false;
+        return true;
+    }
+    
+    public ArrayList<Integer> getFactors(int n) {
+        ArrayList<Integer> factors = new ArrayList<>();
+        int factorNumber = (int) Math.round(Math.sqrt(n));
+        while(factorNumber>=1){
+            if(n % factorNumber == 0){
+                factors.add(factorNumber);
+                factors.add(n/factorNumber);
+                break;
+            }
+            factorNumber--;
+        }
+        return factors;
+    }
+
+    public void computeNHCenterNonCenter(double centerPercent){
+        nhNonCenter = new double[LUV_MAX];
+        nhCenter = new double[LUV_MAX];
+        
+        int areaCenter = (int) Math.round(this.area * centerPercent);
+        while (isPrime(areaCenter)){
+            areaCenter++;
+        }
+
+        ArrayList<Integer> factors = getFactors(areaCenter);
+        int nRowsCenter = factors.get(0);
+        int nColsCenter = factors.get(1);
+
+        if (this.nRows > this.nCols){
+            if (nColsCenter > nRowsCenter){
+                int temp = nRowsCenter;
+                nRowsCenter = nColsCenter;
+                nColsCenter = temp;
+            }
+        } else if (this.nCols > this.nRows){
+            if (nRowsCenter > nColsCenter){
+                int temp = nRowsCenter;
+                nRowsCenter = nColsCenter;
+                nColsCenter = temp;
+            }
+        }
+
+        int nRowsCenterStart = ((this.nRows - nRowsCenter) / 2);
+        int nRowsCenterEnd = nRowsCenterStart + nRowsCenter - 1;
+        int nColsCenterStart = ((this.nCols - nColsCenter) / 2);
+        int nColsCenterEnd = nColsCenterStart + nColsCenter - 1;
+
+        for (int i = 0; i < luv.length; i++){
+            for (int j = 0; j < luv[i].length; j++){
+                if (i >= nRowsCenterStart && i <= nRowsCenterEnd
+                    && j >= nColsCenterStart && j <= nColsCenterEnd){
+                    nhCenter[luv[i][j]]++;
+                } else {
+                    nhNonCenter[luv[i][j]]++;
+                }
+            }
+        }
+        
+    }
+    
+    public double chWithCentering(Image i2, double delta, double centerPercent){
+        if(centerPercent>=1 || centerPercent<=0)
+            throw new RuntimeException("Invalid center percentage value, "
+                    + "expected: 0<center<1, actual: "+centerPercent);
+        delta*=centerPercent;
+        
+//        this.computeNHCenterNonCenter(centerPercent);
+//        i2.computeNHCenterNonCenter(centerPercent);   
+        
+        int nValidColorsCenters = 0, nValidColorsNonCenters = 0;
+        double simCenters = 0, simNonCenters = 0;
+        for(int i=0; i<LUV_MAX; i++){
+            if(this.nhCenter[i]>delta){
+                nValidColorsCenters++;
+                double cur = 1.0 - Math.abs(this.nhCenter[i]-i2.nhCenter[i])/Math.max(this.nhCenter[i],i2.nhCenter[i]);
+                simCenters+=cur;
+            }
+            if(this.nhNonCenter[i]>delta){
+                nValidColorsNonCenters++;
+                double cur = 1.0 - Math.abs(this.nhNonCenter[i]-i2.nhNonCenter[i])/Math.max(this.nhNonCenter[i], i2.nhNonCenter[i]);
+                simNonCenters+=cur;
+            }
+        }
+        simCenters/=nValidColorsCenters;
+        simNonCenters/=nValidColorsNonCenters;
+        
+        return (simCenters+simNonCenters)/2;
     }
     
     public double bonus(Image i2, double delta){
@@ -120,15 +224,14 @@ public class Image {
                 }
                 if(nValidColors>0) curSim/=nValidColors;
                 sim+=curSim;
-//                System.out.println(sim+" "+curSim+" "+nValidColors+" "+i+" "+j);
             }
         sim/=NUM_BLOCKS;
         return sim;
     }
 
-    String getStringNH() {
-        StringBuilder sb = new StringBuilder(nh[0]+"");
-        for(int i=1; i<LUV_MAX; i++) sb.append(" ").append(nh[i]);
+    String getStringArr(double[] arr) {
+        StringBuilder sb = new StringBuilder(arr[0]+"");
+        for(int i=1; i<arr.length; i++) sb.append(" ").append(arr[i]);
         return sb.toString();
     }
     
