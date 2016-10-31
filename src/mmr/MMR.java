@@ -13,18 +13,19 @@ import javax.swing.JPanel;
 public class MMR {
 
     public static void main(String[] args) {
-        ImageData.init();
         Scanner sc = new Scanner(System.in);
+        ImageData.init();
         while(true){
             System.out.print("Enter filename of query image: ");
             String q = sc.next();
+            if(!q.endsWith(".jpg")) q+=".jpg";
             if(!new File("images/"+q).exists()) 
                 throw new RuntimeException("Error, file "+q+" does not exist.");
             System.out.println("Choose your desired algorithm:");
             System.out.println("1- Color Histogram");
             System.out.println("2- Color Histogram with Perceptual Similarity");
-            System.out.println("3- Color Histogram with Centering Refinement");
-            System.out.println("4- Color Histogram with Color Coherence");
+            System.out.println("3- Color Histogram with Color Coherence");
+            System.out.println("4- Color Histogram with Centering Refinement");
             System.out.println("5- Localized Color Histograms");
             int choice = sc.nextInt();
             double delta;
@@ -37,15 +38,15 @@ public class MMR {
                 case 2:
                     System.out.println("Not yet implemented. Lol");
                     break;
-                case 3: 
-                    System.out.print("Enter center percentage: ");
-                    double centerPercent = sc.nextDouble();
-                    performCentering(q, centerPercent);
-                    break;
-                case 4:
+                case 3:
                     System.out.print("Enter connectiveness: ");
                     int conn = sc.nextInt();
                     performCCV(q, conn);
+                    break;
+                case 4: 
+                    System.out.print("Enter center percentage: ");
+                    double centerPercent = sc.nextDouble();
+                    performCentering(q, centerPercent);
                     break;
                 case 5:
                     System.out.print("Enter delta value: ");
@@ -65,6 +66,7 @@ public class MMR {
         ArrayList<Answer> results = new ArrayList<>();
         for (File child : directoryListing) {
             if(!child.getName().endsWith("jpg")) continue;
+            if(child.getName().equals(q)) continue;
             Image i2 = new Image(ImageData.getNH(child.getName()));
             double sim = i1.ch(i2, delta);
             results.add(new Answer(child.getName(), sim));
@@ -80,6 +82,7 @@ public class MMR {
         ArrayList<Answer> results = new ArrayList<>();
         for (File child : directoryListing) {
             if(!child.getName().endsWith("jpg")) continue;
+            if(child.getName().equals(q)) continue;
             Image i2 = new Image(ImageData.getLuv(child.getName()));
             double sim = i1.chWithCentering(i2, centerPercent);
             results.add(new Answer(child.getName(), sim));
@@ -95,6 +98,7 @@ public class MMR {
         ArrayList<Answer> results = new ArrayList<>();
         for (File child : directoryListing) {
             if(!child.getName().endsWith("jpg")) continue;
+            if(child.getName().equals(q)) continue;
             Image i2 = new Image(ImageData.getLuv(child.getName()));
             double sim = i1.chWithCCV(i2, connectiveness);
             results.add(new Answer(child.getName(), sim));
@@ -110,6 +114,7 @@ public class MMR {
         ArrayList<Answer> results = new ArrayList<>();
         for (File child : directoryListing) {
             if(!child.getName().endsWith("jpg")) continue;
+            if(child.getName().equals(q)) continue;
             Image i2 = new Image(ImageData.getLH(child.getName()));
             double sim = i1.bonus(i2, delta);
             results.add(new Answer(child.getName(), sim));
@@ -130,7 +135,7 @@ public class MMR {
         p1.add(srcLabel);
         frame.getContentPane().add(p1);
         JPanel p2 = new JPanel();
-        for(int i=1; i<=10; i++){
+        for(int i=0; i<10; i++){
             JLabel ansLabel = new JLabel(new ImageIcon("images/"+results.get(i).filename));
             ansLabel.setText(results.get(i).filename);
             ansLabel.setHorizontalTextPosition(JLabel.CENTER);

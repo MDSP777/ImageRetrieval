@@ -5,6 +5,8 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.Queue;
 import javax.imageio.ImageIO;
 
 public class Image {
@@ -114,6 +116,54 @@ public class Image {
         return sim;
     }
     
+    public double chWithCentering(Image i2, double centerPercent){
+        if(centerPercent>=1 || centerPercent<=0)
+            throw new RuntimeException("Invalid center percentage value, "
+                    + "expected: 0<center<1, actual: "+centerPercent);
+        
+        this.computeNHCenterNonCenter(centerPercent);
+        i2.computeNHCenterNonCenter(centerPercent);   
+        
+        double sim = 0;
+        for(int i=0; i<LUV_MAX; i++){
+            sim+=Math.abs(this.nhCenter[i]-i2.nhCenter[i])
+                    +Math.abs(this.nhNonCenter[i]-i2.nhNonCenter[i]);
+        }
+        return sim*-1;
+    }
+    
+    public double chWithCCV(Image i2, int connectiveness){
+        int thresh = (this.area+i2.area)/2/100;
+        this.calcCCV(thresh, connectiveness);
+        i2.calcCCV(thresh, connectiveness);
+        double sim = 0;
+        for(int i=0; i<LUV_MAX; i++)
+            sim+=Math.abs(this.coherent[i]-i2.coherent[i])
+                    +Math.abs(this.noncoherent[i]-i2.noncoherent[i]);
+        return sim*-1;
+    }
+    
+    public double bonus(Image i2, double delta){
+        delta/=NUM_BLOCKS;
+        double sim = 0;
+        for(int i=0; i<BLOCKS_PER_ROW; i++)
+            for(int j=0; j<BLOCKS_PER_COL; j++){
+                int nValidColors = 0;
+                double curSim = 0;
+                for(int k=0; k<LUV_MAX; k++){
+                    if(this.lh[i][j][k]>delta){
+                        nValidColors++;
+                        double cur = 1.0 - Math.abs(this.lh[i][j][k]-i2.lh[i][j][k])/
+                                Math.max(this.lh[i][j][k], i2.lh[i][j][k]);
+                        curSim+=cur;
+                    }
+                }
+                if(nValidColors>0) curSim/=nValidColors;
+                sim+=curSim;
+            }
+        sim/=NUM_BLOCKS;
+        return sim;
+    }
     public boolean isPrime(int n) {
         for(int i=2;i*i<=n;i++) 
             if(n%i==0)
@@ -177,58 +227,12 @@ public class Image {
                 }
             }
         }
-        
-    }
-    
-    public double chWithCentering(Image i2, double centerPercent){
-        if(centerPercent>=1 || centerPercent<=0)
-            throw new RuntimeException("Invalid center percentage value, "
-                    + "expected: 0<center<1, actual: "+centerPercent);
-        
-        this.computeNHCenterNonCenter(centerPercent);
-        i2.computeNHCenterNonCenter(centerPercent);   
-        
-        double sim = 0;
         for(int i=0; i<LUV_MAX; i++){
-            sim+=Math.abs(this.nhCenter[i]-i2.nhCenter[i])
-                    +Math.abs(this.nhNonCenter[i]-i2.nhNonCenter[i]);
+            nhCenter[i]/=area;
+            nhNonCenter[i]/=area;
         }
-        return sim*-1;
     }
     
-    public double chWithCCV(Image i2, int connectiveness){
-        int thresh = (this.area+i2.area)/2/100;
-        this.calcCCV(thresh, connectiveness);
-        i2.calcCCV(thresh, connectiveness);
-        double sim = 0;
-        for(int i=0; i<LUV_MAX; i++){
-            sim+=Math.abs(this.coherent[i]-i2.coherent[i])
-                    +Math.abs(this.noncoherent[i]-i2.coherent[i]);
-        }
-        return sim*-1;
-    }
-    
-    public double bonus(Image i2, double delta){
-        delta/=NUM_BLOCKS;
-        double sim = 0;
-        for(int i=0; i<BLOCKS_PER_ROW; i++)
-            for(int j=0; j<BLOCKS_PER_COL; j++){
-                int nValidColors = 0;
-                double curSim = 0;
-                for(int k=0; k<LUV_MAX; k++){
-                    if(this.lh[i][j][k]>delta){
-                        nValidColors++;
-                        double cur = 1.0 - Math.abs(this.lh[i][j][k]-i2.lh[i][j][k])/
-                                Math.max(this.lh[i][j][k], i2.lh[i][j][k]);
-                        curSim+=cur;
-                    }
-                }
-                if(nValidColors>0) curSim/=nValidColors;
-                sim+=curSim;
-            }
-        sim/=NUM_BLOCKS;
-        return sim;
-    }
     
     public void calcCCV(int thresh, int connectiveness){
         coherent = new double[LUV_MAX];
@@ -247,21 +251,33 @@ public class Image {
                     else noncoherent[val] += inc;
                 }
             }
+        for(int i=0; i<LUV_MAX; i++){
+            coherent[i]/=area;
+            noncoherent[i]/=area;
+        }
     }
     
     private int floodfill(int[][] luv, int i, int j, int val, int connectiveness){
-        if(luv[i][j]!=val) return 0;
-        int totalPixels = 1;
-        luv[i][j] = -1;
-        if(i>0) totalPixels+=floodfill(luv, i-1, j, val, connectiveness);
-        if(i<luv.length-1) totalPixels+=floodfill(luv, i+1, j, val, connectiveness);
-        if(j>0) totalPixels+=floodfill(luv, i, j-1, val, connectiveness);
-        if(j<luv[0].length-1) totalPixels+=floodfill(luv, i, j+1, val, connectiveness);
-        if(connectiveness==8){
-            if(i>0 && j>0) totalPixels+=floodfill(luv, i-1, j-1, val, connectiveness);
-            if(i>0 && j<luv[0].length-1) totalPixels+=floodfill(luv, i-1, j+1, val, connectiveness);
-            if(i<luv.length-1 && j>0) totalPixels+=floodfill(luv, i+1, j-1, val, connectiveness);
-            if(i<luv.length-1 && j<luv[0].length-1) totalPixels+=floodfill(luv, i+1, j+1, val, connectiveness);   
+        Queue<Node> q = new LinkedList<>();
+        int totalPixels = 0;
+        q.add(new Node(i,j));
+        while(!q.isEmpty()){
+            Node cur = q.poll();
+            i = cur.i;
+            j = cur.j;
+            if(luv[i][j]!=val) continue;
+            totalPixels++;
+            luv[i][j] = -1;
+            if(i>0) q.add(new Node(i-1, j));
+            if(i<luv.length-1) q.add(new Node(i+1, j));
+            if(j>0) q.add(new Node(i, j-1));
+            if(j<luv[0].length-1) q.add(new Node(i, j+1));
+            if(connectiveness==8){
+                if(i>0 && j>0) q.add(new Node(i-1, j-1));
+                if(i>0 && j<luv[0].length-1) q.add(new Node(i-1, j+1));
+                if(i<luv.length-1 && j>0) q.add(new Node(i+1, j-1));
+                if(i<luv.length-1 && j<luv[0].length-1) q.add(new Node(i+1, j+1));
+            }
         }
         return totalPixels;
     }
@@ -293,4 +309,13 @@ public class Image {
         return sb.toString();
     }
     
+    private class Node {
+        int i;
+        int j;
+        
+        public Node(int i, int j){
+            this.i = i;
+            this.j = j;
+        }
+    }
 }
