@@ -38,16 +38,14 @@ public class MMR {
                     System.out.println("Not yet implemented. Lol");
                     break;
                 case 3: 
-                    System.out.println("Select refinement level: ");
-                    System.out.println("1- 50%");
-                    System.out.println("2- 75%");
-                    int refinement = sc.nextInt();
-                    System.out.print("Enter delta value: ");
-                    delta = sc.nextDouble();
-                    performCentering(q, refinement, delta);
+                    System.out.print("Enter center percentage: ");
+                    double centerPercent = sc.nextDouble();
+                    performCentering(q, centerPercent);
                     break;
                 case 4:
-                    System.out.println("Not yet implemented. Lol");
+                    System.out.print("Enter connectiveness: ");
+                    int conn = sc.nextInt();
+                    performCCV(q, conn);
                     break;
                 case 5:
                     System.out.print("Enter delta value: ");
@@ -61,77 +59,68 @@ public class MMR {
     }
 
     private static void performCH(String q, double delta) {
-        double[] nh = ImageData.getNH(q);
-        Image i1 = new Image(nh);
+        Image i1 = new Image(ImageData.getNH(q));
         File dir = new File("images/");
         File[] directoryListing = dir.listFiles();  
         ArrayList<Answer> results = new ArrayList<>();
         for (File child : directoryListing) {
             if(!child.getName().endsWith("jpg")) continue;
-            double[] curNH = ImageData.getNH(child.getName());
-            Image i2 = new Image(curNH);
-            double sim = i1.ch(i2, 0.005);
+            Image i2 = new Image(ImageData.getNH(child.getName()));
+            double sim = i1.ch(i2, delta);
             results.add(new Answer(child.getName(), sim));
         }
         Collections.sort(results);
-        createFrame(q, results);
+        createFrame("CH, delta="+delta, q, results);
     }
     
-    private static void performCentering(String q, int refinement, double delta) {
-        double[] center;
-        double[] noncenter;
-        double centerPercent;
-        if(refinement==1){
-            center = ImageData.getCenter50(q);
-            noncenter = ImageData.getNonCenter50(q);
-            centerPercent = 0.5;
-        } else {
-            center = ImageData.getCenter75(q);
-            noncenter = ImageData.getNonCenter75(q);
-            centerPercent = 0.75;
-        }
-        Image i1 = new Image(center, noncenter);
+    private static void performCentering(String q, double centerPercent) {
+        Image i1 = new Image(ImageData.getLuv(q));
         File dir = new File("images/");
         File[] directoryListing = dir.listFiles();  
         ArrayList<Answer> results = new ArrayList<>();
         for (File child : directoryListing) {
             if(!child.getName().endsWith("jpg")) continue;
-            double[] curCenter;
-            double[] curNoncenter;
-            if(refinement==1){
-                curCenter = ImageData.getCenter50(child.getName());
-                curNoncenter = ImageData.getNonCenter50(child.getName());
-            } else {
-                curCenter = ImageData.getCenter75(child.getName());
-                curNoncenter = ImageData.getNonCenter75(child.getName());
-            }
-            Image i2 = new Image(curCenter, curNoncenter);
-            double sim = i1.chWithCentering(i2, delta, centerPercent);
+            Image i2 = new Image(ImageData.getLuv(child.getName()));
+            double sim = i1.chWithCentering(i2, centerPercent);
             results.add(new Answer(child.getName(), sim));
         }
         Collections.sort(results);
-        createFrame(q, results);
+        createFrame("CH with Centering ("+centerPercent+")", q, results);
+    }
+    
+    private static void performCCV(String q, int connectiveness) {
+        Image i1 = new Image(ImageData.getLuv(q));
+        File dir = new File("images/");
+        File[] directoryListing = dir.listFiles();  
+        ArrayList<Answer> results = new ArrayList<>();
+        for (File child : directoryListing) {
+            if(!child.getName().endsWith("jpg")) continue;
+            Image i2 = new Image(ImageData.getLuv(child.getName()));
+            double sim = i1.chWithCCV(i2, connectiveness);
+            results.add(new Answer(child.getName(), sim));
+        }
+        Collections.sort(results);
+        createFrame("CH with CCV, "+connectiveness+"-conectiveness", q, results);
     }
     
     private static void performLH(String q, double delta) {
-        double[][][] lh = ImageData.getLH(q);
-        Image i1 = new Image(lh);
+        Image i1 = new Image(ImageData.getLH(q));
         File dir = new File("images/");
         File[] directoryListing = dir.listFiles();  
         ArrayList<Answer> results = new ArrayList<>();
         for (File child : directoryListing) {
             if(!child.getName().endsWith("jpg")) continue;
-            double[][][] curLH = ImageData.getLH(child.getName());
-            Image i2 = new Image(curLH);
-            double sim = i1.bonus(i2, 0.005);
+            Image i2 = new Image(ImageData.getLH(child.getName()));
+            double sim = i1.bonus(i2, delta);
             results.add(new Answer(child.getName(), sim));
         }
         Collections.sort(results);
-        createFrame(q, results);
+        createFrame("LH (25 blocks), delta="+delta, q, results);
     }
 
-    private static void createFrame(String q, ArrayList<Answer> results) {
+    private static void createFrame(String title, String q, ArrayList<Answer> results) {
         JFrame frame = new JFrame();
+        frame.setTitle(title);
         frame.getContentPane().setLayout(new GridLayout(2, 1));
         JPanel p1 = new JPanel();
         JLabel srcLabel = new JLabel(new ImageIcon("images/"+q));

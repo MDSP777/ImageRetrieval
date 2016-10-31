@@ -88,9 +88,11 @@ public class Image {
         this.lh = lh;
     }
     
-    public Image(double[] center, double[] noncenter){
-        this.nhCenter = center;
-        this.nhNonCenter = noncenter;
+    public Image(int[][] luv){
+        this.luv = luv;
+        this.nRows = luv.length;
+        this.nCols = luv[0].length;
+        this.area = nRows*nCols;
     }
     
     public Image(double[] nh, double[][][] lh){
@@ -178,33 +180,32 @@ public class Image {
         
     }
     
-    public double chWithCentering(Image i2, double delta, double centerPercent){
+    public double chWithCentering(Image i2, double centerPercent){
         if(centerPercent>=1 || centerPercent<=0)
             throw new RuntimeException("Invalid center percentage value, "
                     + "expected: 0<center<1, actual: "+centerPercent);
-        delta*=centerPercent;
         
-//        this.computeNHCenterNonCenter(centerPercent);
-//        i2.computeNHCenterNonCenter(centerPercent);   
+        this.computeNHCenterNonCenter(centerPercent);
+        i2.computeNHCenterNonCenter(centerPercent);   
         
-        int nValidColorsCenters = 0, nValidColorsNonCenters = 0;
-        double simCenters = 0, simNonCenters = 0;
+        double sim = 0;
         for(int i=0; i<LUV_MAX; i++){
-            if(this.nhCenter[i]>delta){
-                nValidColorsCenters++;
-                double cur = 1.0 - Math.abs(this.nhCenter[i]-i2.nhCenter[i])/Math.max(this.nhCenter[i],i2.nhCenter[i]);
-                simCenters+=cur;
-            }
-            if(this.nhNonCenter[i]>delta){
-                nValidColorsNonCenters++;
-                double cur = 1.0 - Math.abs(this.nhNonCenter[i]-i2.nhNonCenter[i])/Math.max(this.nhNonCenter[i], i2.nhNonCenter[i]);
-                simNonCenters+=cur;
-            }
+            sim+=Math.abs(this.nhCenter[i]-i2.nhCenter[i])
+                    +Math.abs(this.nhNonCenter[i]-i2.nhNonCenter[i]);
         }
-        simCenters/=nValidColorsCenters;
-        simNonCenters/=nValidColorsNonCenters;
-        
-        return (simCenters+simNonCenters)/2;
+        return sim*-1;
+    }
+    
+    public double chWithCCV(Image i2, int connectiveness){
+        int thresh = (this.area+i2.area)/2/100;
+        this.calcCCV(thresh, connectiveness);
+        i2.calcCCV(thresh, connectiveness);
+        double sim = 0;
+        for(int i=0; i<LUV_MAX; i++){
+            sim+=Math.abs(this.coherent[i]-i2.coherent[i])
+                    +Math.abs(this.noncoherent[i]-i2.coherent[i]);
+        }
+        return sim*-1;
     }
     
     public double bonus(Image i2, double delta){
@@ -228,10 +229,56 @@ public class Image {
         sim/=NUM_BLOCKS;
         return sim;
     }
+    
+    public void calcCCV(int thresh, int connectiveness){
+        coherent = new double[LUV_MAX];
+        noncoherent = new double[LUV_MAX];
+        if(connectiveness!=4 && connectiveness!=8) 
+            throw new RuntimeException("Invalid connectiveness value, "
+                    + "expected: 4 or 8, actual: "+connectiveness);
+        int[][] luvCopy = new int[nRows][];
+        for(int i=0; i<nRows; i++) luvCopy[i] = luv[i].clone();
+        for(int i=0; i<nRows; i++)
+            for(int j=0; j<nCols; j++){
+                int val = luvCopy[i][j];
+                if(val!=-1){
+                    int inc = floodfill(luvCopy, i, j, val, connectiveness);
+                    if(inc>=thresh) coherent[val] += inc;
+                    else noncoherent[val] += inc;
+                }
+            }
+    }
+    
+    private int floodfill(int[][] luv, int i, int j, int val, int connectiveness){
+        if(luv[i][j]!=val) return 0;
+        int totalPixels = 1;
+        luv[i][j] = -1;
+        if(i>0) totalPixels+=floodfill(luv, i-1, j, val, connectiveness);
+        if(i<luv.length-1) totalPixels+=floodfill(luv, i+1, j, val, connectiveness);
+        if(j>0) totalPixels+=floodfill(luv, i, j-1, val, connectiveness);
+        if(j<luv[0].length-1) totalPixels+=floodfill(luv, i, j+1, val, connectiveness);
+        if(connectiveness==8){
+            if(i>0 && j>0) totalPixels+=floodfill(luv, i-1, j-1, val, connectiveness);
+            if(i>0 && j<luv[0].length-1) totalPixels+=floodfill(luv, i-1, j+1, val, connectiveness);
+            if(i<luv.length-1 && j>0) totalPixels+=floodfill(luv, i+1, j-1, val, connectiveness);
+            if(i<luv.length-1 && j<luv[0].length-1) totalPixels+=floodfill(luv, i+1, j+1, val, connectiveness);   
+        }
+        return totalPixels;
+    }
 
     String getStringArr(double[] arr) {
         StringBuilder sb = new StringBuilder(arr[0]+"");
         for(int i=1; i<arr.length; i++) sb.append(" ").append(arr[i]);
+        return sb.toString();
+    }
+    
+    String getStringLuv(){
+        StringBuilder sb = new StringBuilder();
+        for(int i=0; i<nRows; i++){    
+            sb.append(luv[i][0]);
+            for(int j=0; j<nCols; j++) sb.append(" ").append(luv[i][j]);
+            if(!(i==nRows-1)) sb.append("\n");
+        }
         return sb.toString();
     }
     
