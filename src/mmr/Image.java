@@ -26,6 +26,7 @@ public class Image {
     
     double[] coherent;
     double[] noncoherent;
+    SimilarityMatrix simMatrix = new SimilarityMatrix();
     
     public Image(String filename){
         this.filename = filename;
@@ -281,6 +282,46 @@ public class Image {
         }
         return totalPixels;
     }
+
+    public double ps(Image i2) {
+
+        double simColor = 0;
+        for(int i = 0; i < LUV_MAX; i++) {
+            simColor += getSimColor(i2, i) * this.nh[i];
+        }
+
+        return simColor;
+    }
+
+    public double getSimColor(Image i2, int i) {
+
+        return (1 + getPerColor(i2, i)) * getExactColor(i2, i);
+
+    }
+
+    public double getPerColor(Image i2, int i) {
+
+        double sim = 0;
+        //SimilarityMatrix simMatrix = new SimilarityMatrix();
+
+        for(int j = 0; j < LUV_MAX; j++) {
+
+            if(simMatrix.getColorMatrix()[i][j] != 0){
+                sim += 1.0 - Math.abs((this.nh[i] - i2.nh[j]) / Math.max(this.nh[i], i2.nh[j])) * simMatrix.getColorMatrix()[i][j];
+            }
+
+        }
+
+        return sim;
+
+    }
+
+    public double getExactColor(Image i2, int i) {
+
+        return 1.0 - Math.abs((this.nh[i] - i2.nh[i]) / Math.max(this.nh[i], i2.nh[i]));
+
+    }
+
 
     String getStringArr(double[] arr) {
         StringBuilder sb = new StringBuilder(arr[0]+"");

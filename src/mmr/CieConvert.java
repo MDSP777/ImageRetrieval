@@ -24,7 +24,7 @@ public class CieConvert
       	}
       }
       
-      private class LUVClass
+      public class LUVClass
       {     //used to store the Luv value range for every index
       	public double L, u, v;
       }

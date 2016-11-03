@@ -36,7 +36,7 @@ public class MMR {
                     performCH(q, delta);
                     break;
                 case 2:
-                    System.out.println("Not yet implemented. Lol");
+                    performPS(q);
                     break;
                 case 3:
                     System.out.print("Enter connectiveness: ");
@@ -121,6 +121,22 @@ public class MMR {
         }
         Collections.sort(results);
         createFrame("LH (25 blocks), delta="+delta, q, results);
+    }
+
+    private static void performPS(String q) {
+        Image i1 = new Image(ImageData.getNH(q));
+        File dir = new File("images/");
+        File[] directoryListing = dir.listFiles();
+        ArrayList<Answer> results = new ArrayList<>();
+        for (File child : directoryListing) {
+            if(!child.getName().endsWith("jpg")) continue;
+            if(child.getName().equals(q)) continue;
+            Image i2 = new Image(ImageData.getNH(child.getName()));
+            double sim = i1.ps(i2);
+            results.add(new Answer(child.getName(), sim));
+        }
+        Collections.sort(results);
+        createFrame("CH with Perceptual Similarity", q, results);
     }
 
     private static void createFrame(String title, String q, ArrayList<Answer> results) {
