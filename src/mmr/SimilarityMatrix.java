@@ -16,16 +16,22 @@ public class SimilarityMatrix {
     public static final int LUV_MAX = 159;
     public static final double P = 0.2;
 
-    public double colorMatrix[][] = new double[LUV_MAX][LUV_MAX];
+    public double colorMatrix[][];
     public double distanceMatrix[][];
     public double max;
     public double threshold;
+    private static SimilarityMatrix instance = null;
 
+    public static SimilarityMatrix getInstance(){
+        if(instance==null){
+            instance = new SimilarityMatrix();
+        }
+        return instance;
+    }
 
-    public SimilarityMatrix() {
-
+    private SimilarityMatrix() {
         if(colorMatrix == null) {
-
+            colorMatrix = new double[LUV_MAX][LUV_MAX];
             File file = new File("colSim.txt");
 
             if (file.exists()) {
@@ -36,8 +42,6 @@ public class SimilarityMatrix {
             }
 
         }
-
-
     }
 
     public void writeFile(){
@@ -77,18 +81,18 @@ public class SimilarityMatrix {
     public int readFile() {
 
         int flag = 1;
-        BufferedReader in;
+        BufferedReader bw;
 
         try{
             File file = new File("colSim.txt");
-            in = new BufferedReader(new FileReader(file));
+            bw = new BufferedReader(new FileReader(file));
             String[] s;
 
             int i = 0;
             while (true) {
-
+                String in = bw.readLine();
                 if("".equals(in) || in==null) break;
-                s = in.readLine().split(" ");
+                s = in.split(" ");
                 //System.out.println(s.length);
                 for(int j = 0; j < LUV_MAX; j++) {
                     colorMatrix[i][j] = Double.parseDouble(s[j]);
@@ -96,7 +100,7 @@ public class SimilarityMatrix {
                 i++;
             }
 
-            in.close();
+            bw.close();
         }
         catch(IOException io) {
             System.out.println("WIW2");

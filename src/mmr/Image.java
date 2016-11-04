@@ -26,7 +26,7 @@ public class Image {
     
     double[] coherent;
     double[] noncoherent;
-    SimilarityMatrix simMatrix = new SimilarityMatrix();
+    SimilarityMatrix simMatrix = SimilarityMatrix.getInstance();
     
     public Image(String filename){
         this.filename = filename;
@@ -287,7 +287,7 @@ public class Image {
 
         double simColor = 0;
         for(int i = 0; i < LUV_MAX; i++) {
-            simColor += getSimColor(i2, i) * this.nh[i];
+            if(this.nh[i]>0) simColor += (getSimColor(i2, i) * this.nh[i]);
         }
 
         return simColor;
